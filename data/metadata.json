@@ -1,0 +1,14 @@
+[
+  {
+    "id": "reentrancy_01",
+    "file": "reentrancy_01.sol",
+    "vulnerability": "reentrancy",
+    "description": "External call before state update allows reentrancy attack"
+  },
+  {
+    "id": "access_control_01",
+    "file": "access_control_01.sol",
+    "vulnerability": "access_control",
+    "description": "Missing owner check allows anyone to withdraw funds"
+  }
+]
