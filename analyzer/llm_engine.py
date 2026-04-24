@@ -4,23 +4,30 @@ def generate_explanation(contract_code, vulnerabilities, rag_context):
     prompt = f"""
 You are a smart contract security auditor.
 
-Analyze the Solidity contract and explain vulnerabilities clearly.
+STRICT RULES:
+- Use ONLY the vulnerabilities provided in "Detected Issues"
+- Do NOT invent new vulnerabilities
+- Respect severity exactly (High, Medium, Low, Informational)
+- Use "Similar Real-World Cases" to support reasoning
+- Do NOT exaggerate or misclassify severity
 
 Contract:
-{contract_code}
+{contract_code[:1500]}
 
 Detected Issues:
 {vulnerabilities}
 
-Similar Known Patterns:
+Similar Real-World Cases:
 {rag_context}
 
-Tasks:
-1. Explain each vulnerability in simple terms
-2. Explain how it can be exploited
-3. Suggest a fix
+TASK:
+For each detected issue:
+1. Explain the vulnerability clearly
+2. Describe how it can be exploited (accurately)
+3. Reference similar real-world patterns if relevant
+4. Suggest a precise fix
 
-Keep it concise and structured.
+Be concise, technical, and accurate.
 """
 
     response = ollama.chat(
