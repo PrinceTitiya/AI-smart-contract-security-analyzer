@@ -1,401 +1,555 @@
-# AI Smart Contract Security Analyzer
 
-An **AI-powered smart contract auditing system** that combines **static analysis (Slither)** with **Retrieval-Augmented Generation (RAG)** and a **local LLM (Llama3 via Ollama)** to detect, analyze, and explain vulnerabilities in Solidity contracts.
-
+# AI Smart Contract Security Analyzer (AISCSA)
 ---
 
 # Overview
 
-This project is designed to simulate how a **real-world smart contract auditor** works:
+**AISSCA (AI Smart Contract Security Analyzer)** is an intelligent security analysis system that combines:
 
-- **Static tools** detect known vulnerabilities
-- **AI retrieves similar exploit patterns**
-- **LLM explains issues like a human expert**
+* Static analysis (rule-based detection)
+* Retrieval-Augmented Generation (RAG)
+* Large Language Models (LLMs)
+
+to analyze Solidity smart contracts, identify vulnerabilities, and generate human-readable security reports.
 
 ---
 
-# System Architecture
+#  Objective
 
-```
-            ┌──────────────┐
-            │   Contract   │
-            └──────┬───────┘
-                   ↓
-        ┌──────────────────────────┐
-        │Static Analysis (Slither) │
-        └──────────┬───────────────┘
-                   ↓
-            Vulnerabilities (facts)
-                   ↓
-               Scoring Engine
-                   +
-        ┌──────────────────────────┐
-        │  Embedding Model         │
-        └──────────┬───────────────┘
-                   ↓
-            Vector Database (ChromaDB)
-                   ↓
-         Similar Contracts Retrieved
-                   ↓
-              Metadata (context)
-                   ↓
-        ┌──────────────────────────┐
-        │  LLM (Llama3 via Ollama) │
-        └──────────┬───────────────┘
-                   ↓
-        Final Security Report
+Traditional tools like Slither detect vulnerabilities but lack:
+
+* Context
+* Real-world pattern matching
+* Explanation clarity
+
+AISCA solves this by building a **multi-stage AI pipeline**:
+
+```text
+Detect → Retrieve → Filter → Explain
 ```
 
 ---
 
-# Tech Stack
+# 🧠Core Architecture
 
-### Static Analysis
-
-- **Slither** → vulnerability detection
-
-### AI / RAG
-
-- **SentenceTransformers (MiniLM)** → embeddings
-- **ChromaDB** → vector database
-
-### LLM
-
-- **Ollama + Llama3 / Mistral** → explanation engine
-
-### Language
-
-- Python
-
----
-
-# 📁 Project Structure
-
-```
-ai-smart-contract-analyzer/
-
-├── analyzer/
-│   ├── loader.py            # Load contract
-│   ├── slither_runner.py    # Run Slither
-│   ├── parser.py            # Extract vulnerabilities
-│   ├── embedder.py          # Generate embeddings
-│   ├── vector_store.py      # ChromaDB interface
-│   ├── rag_engine.py        # Similarity search
-│   ├── data_loader.py       # Load dataset into DB
-│   ├── llm_engine.py        # LLM explanation
-│
-├── data/
-│   ├── vulnerable_contracts/
-│   ├── metadata.json
-│
-├── analyze.py               # Main CLI entry point
-└── README.md
+```text
+User Contract (.sol)
+        ↓
+[ Slither Analysis Engine ]
+        ↓
+[ Function Extraction Layer ]
+        ↓
+[ Embedding Engine ]
+        ↓
+[ Vector Database (SCV Dataset) ]
+        ↓
+[ RAG Retrieval Engine ]
+        ↓
+[ Filtering & Ranking Layer ]
+        ↓
+[ LLM Explanation Engine ]
+        ↓
+Final Security Report
 ```
 
 ---
 
-# System Flow (Step-by-Step)
+# 🔍 System Components (Deep Explanation)
 
 ---
 
-## 1. Input Layer
+## 1. Static Analysis Layer
 
-User provides:
+**Tool Used:** Slither
 
+### Role:
+
+* Detect known vulnerability patterns
+* Provide deterministic analysis
+
+### Output Example:
+
+```text
+reentrancy-eth (High)
+timestamp (Low)
+low-level-calls (Info)
 ```
-.sol file
+
+### Key Insight:
+
+```text
+Slither = Ground Truth Engine
 ```
 
-Handled by:
+---
+
+## 2. Function Extraction Layer
+
+### Problem Solved:
+
+Whole-contract analysis is noisy.
+
+### Solution:
+
+Extract **function-level code blocks** using Slither’s internal parsing:
 
 ```python
-loader.py
+function.source_mapping.content
 ```
 
-Output: Raw Solidity code (string)
+### Result:
+
+```text
+deposit()
+withdraw()
+getContractBalance()
+```
+
+### Why Important:
+
+```text
+Vulnerabilities exist at function level, not contract level
+```
 
 ---
 
-## 2. Static Analysis (Slither)
+## 3. Embedding Engine
 
-```python
-slither_runner.py
+### Role:
+
+Convert Solidity code into vector representations.
+
+```text
+function withdraw() → vector embedding
 ```
 
-Runs:
+### Properties Captured:
 
-```
-slither contract.sol --json result.json
-```
+* Code structure
+* Logical patterns
+* Semantic meaning
 
-👉 Output:
+---
+
+## 4. Vector Database (RAG Memory)
+
+### Dataset Used:
+
+**Smart Contract Vulnerability Dataset (SCV)**
+
+### Each Entry:
 
 ```json
 {
-  "check": "reentrancy-eth",
-  "impact": "High",
-  "description": "..."
+  "category": "Reentrancy",
+  "code_snippet": "...",
+  "description": "...",
+  "severity": "High"
 }
 ```
 
----
+### Stored As:
 
-## 3. Parsing Layer
-
-```python
-parser.py
-```
-
-Extracts structured vulnerabilities:
-
-```json
-[
-  {
-    "check": "reentrancy-eth",
-    "impact": "High"
-  }
-]
+```text
+Embedding → vector
+Metadata → vulnerability info
 ```
 
 ---
 
-## 4. Scoring Engine
+## 5. RAG (Retrieval Engine)
 
-```python
-analyze.py
+### Process:
+
+For each function:
+
+```text
+Function → embedding → similarity search → top matches
 ```
 
-Uses weighted scoring:
+### Output Example:
 
-| Impact        | Penalty |
-| ------------- | ------- |
-| High          | -25     |
-| Medium        | -15     |
-| Low           | -10     |
-| Informational | -5      |
+```text
+withdraw():
+  → Reentrancy (0.05)
+  → Reentrancy (0.07)
+```
+
+### Important:
+
+```text
+RAG = similarity engine (NOT truth engine)
+```
+
+---
+
+## 6. Filtering & Ranking Layer (Phase 4)
+
+### Purpose:
+
+Remove noise and improve precision.
+
+### Filters Applied:
+
+---
+
+### 1. Distance Threshold
+
+```text
+distance > 0.4 → discard
+```
+
+Removes weak matches.
+
+---
+
+### 2. Slither Alignment
+
+```text
+Only keep matches related to Slither-detected issues
+```
 
 Example:
 
-```
-Score = 100 - penalties
-```
-
----
-
-## 5. Embedding Layer (AI)
-
-```python
-embedder.py
-```
-
-Converts contract into vector:
-
-```
-Solidity Code → 384-dim vector
-```
-
-Represents **semantic meaning of code**
-
----
-
-## 6. Vector Database (Memory)
-
-```python
-vector_store.py
-```
-
-Stores:
-
-```
-[id, contract_code, embedding, metadata]
+```text
+Slither: reentrancy
+RAG: overflow → removed ❌
+RAG: reentrancy → kept ✅
 ```
 
 ---
 
-## 7. Dataset (Knowledge Base)
+### 3. Deduplication
 
-### Why needed?
-
-AI needs **examples to compare against**
-
----
-
-### 📄 metadata.json
-
-```json
-{
-  "vulnerability": "reentrancy",
-  "description": "External call before state update..."
-}
-```
-
-Adds **meaning to raw code**
-
----
-
-### Key Insight
-
-```
-Code alone = syntax
-Code + metadata = knowledge
+```text
+Keep best match per vulnerability
 ```
 
 ---
 
-## 8. RAG Engine (Similarity Search)
+### 4. Function-Level Filtering
 
-```python
-rag_engine.py
-```
-
-Process:
-
-```
-Input contract → embedding → compare with DB → retrieve closest matches
+```text
+Safe functions → no matches
+Vulnerable functions → focused matches
 ```
 
 ---
 
-### Similarity Metric
+### Result:
 
-- Uses **vector distance**
-- Lower = more similar
-
-```
-0.0 → identical
-0.1 → very similar
-0.3+ → less similar
+```text
+deposit() → No relevant matches
+withdraw() → Reentrancy (0.05)
 ```
 
 ---
 
-## 9. LLM Explanation Engine
+## 7. LLM Explanation Engine
 
-```python
-llm_engine.py
-```
+**Model:** Local LLM via Ollama (e.g., Llama)
 
-Uses:
+### Input:
 
-- Contract code
-- Slither output
-- RAG insights
+* Slither vulnerabilities
+* Filtered RAG context
 
----
+### Output:
 
-### Prompt Structure
-
-```
-Contract
-+
-Detected Issues
-+
-Similar Patterns
-↓
-LLM Explanation
+```text
+- Vulnerability explanation
+- Exploitation method
+- Real-world analogy
+- Suggested fix
 ```
 
 ---
 
-### Output
+# 🔄 Full System Flow
 
-```
-- Explanation
-- Exploitation scenario
-- Fix suggestions
+---
+
+## Step-by-Step Execution
+
+---
+
+### 1. Input
+
+User provides:
+
+```bash
+python analyze.py contract.sol
 ```
 
 ---
 
-# Core Design Philosophy
+### 2. Slither Analysis
+
+```text
+Detect vulnerabilities
+```
+
+---
+
+### 3. Function Extraction
+
+```text
+Split contract → functions
+```
+
+---
+
+### 4. Embedding
+
+```text
+Each function → vector
+```
+
+---
+
+### 5. RAG Retrieval
+
+```text
+Find similar vulnerabilities from dataset
+```
+
+---
+
+### 6. Filtering
+
+```text
+Remove noise using:
+- Distance
+- Slither alignment
+- Deduplication
+```
+
+---
+
+### 7. Context Building
+
+```text
+Create structured RAG summary
+```
+
+---
+
+### 8. LLM Explanation
+
+```text
+Generate final human-readable report
+```
+
+---
+
+#  Example Output Behavior
+
+---
+
+## Input Contract
+
+```solidity
+withdraw() uses msg.sender.call before state update
+```
+
+---
+
+## Output
+
+```text
+Function: withdraw()
+→ Reentrancy (0.05)
+
+Explanation:
+- External call before state update
+- Allows recursive withdrawal
+- Similar to DAO hack
+- Fix: Checks-Effects-Interactions pattern
+```
+
+---
+
+#  Known Limitations
+
+---
+
+## 1. Dataset Coverage
+
+```text
+RAG only works if dataset contains relevant patterns
+```
+
+Example:
+
+* Reentrancy → strong detection ✅
+* Timestamp dependency → weak detection ❌
+
+---
+
+## 2. String-Based Matching
+
+```text
+Current matching uses substring logic
+```
+
+Future improvement:
+
+```text
+Embedding-based alignment
+```
+
+---
+
+## 3. Fixed Threshold
+
+```text
+distance threshold = 0.4
+```
+
+Future:
+
+```text
+Adaptive thresholding
+```
+
+---
+
+#  Key Design Principles
 
 ---
 
 ## 1. Hybrid Intelligence
 
-```
-Slither → factual correctness
-RAG → contextual similarity
-LLM → human explanation
+```text
+Static + Retrieval + Generative AI
 ```
 
 ---
 
-## 2. Grounded AI
+## 2. Separation of Concerns
 
-LLM is NOT allowed to guess.
-
-```
-AI is grounded on:
-✔ Slither results
-✔ RAG context
+```text
+Detection ≠ Retrieval ≠ Explanation
 ```
 
 ---
 
-## 3. Modular Architecture
+## 3. Precision over Noise
 
-Each component is independent:
-
-- Can upgrade embeddings
-- Can swap LLM
-- Can improve dataset
-
----
-
-# 🧪 Example Output
-
-```
-===== SECURITY REPORT =====
-Score: 65/100
-
-===== AI SECURITY ANALYSIS =====
-
-1. Reentrancy Vulnerability:
-Explanation: External call before state update...
-Attack: Recursive withdraw exploit...
-Fix: Use Checks-Effects-Interactions pattern
-
-2. Solidity Version Issue:
-...
-
-3. Low-Level Call Risk:
-...
+```text
+Better to show nothing than wrong results
 ```
 
 ---
 
-# Current Limitations
+## 4. Data-Driven Intelligence
 
-- LLM runs locally → slow on CPU
-- Dataset is small → limited intelligence
-- No UI/API (CLI only)
-- No AST-level analysis
+```text
+System quality depends on dataset quality
+```
 
 ---
 
-# Key Learnings
-
-This project demonstrates:
-
-- Smart contract security fundamentals
-- Static analysis integration
-- RAG system design
-- LLM grounding techniques
-- End-to-end AI system architecture
+# 📈 Evolution of the System
 
 ---
 
-# Final Insight
+## Phase 1
 
-This system is NOT:
+```text
+Slither only → basic detection
+```
 
+---
+
+## Phase 2
+
+```text
+RAG added → weak influence
 ```
-AI replacing auditors
+
+---
+
+## Phase 3
+
+```text
+Function-level RAG → strong similarity
 ```
+
+---
+
+## Phase 4 (Current)
+
+```text
+Filtering layer → precision + reliability
+```
+
+---
+
+#  Future Improvements
+
+---
+
+## Phase 5 (Planned)
+
+* Embedding-based vulnerability alignment
+* Exploit (PoC) generation
+* Multi-function reasoning
+* Cross-contract analysis
+* Dynamic threshold tuning
+
+---
+
+#  How to Run
+
+---
+
+## 1. Install dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+---
+
+## 2. Run analyzer
+
+```bash
+python analyze.py test.sol
+```
+
+---
+
+## 3. Output includes:
+
+* Vulnerability list
+* Security score
+* Filtered RAG matches
+* AI-generated explanation
+
+---
+
+#  Final System Identity
+
+---
+
+AISCA is not just:
+
+```text
+❌ A static analyzer
+❌ A chatbot
+```
+
+---
 
 It is:
 
+```text
+ An AI-powered smart contract auditing system
 ```
-AI assisting auditors
-```
+
+---
+
+*~ Author: Prince Titiya ~*
+
+
