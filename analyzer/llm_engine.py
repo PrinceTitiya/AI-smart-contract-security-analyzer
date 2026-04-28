@@ -17,7 +17,7 @@ Contract:
 Detected Issues:
 {vulnerabilities}
 
-Similar Real-World Cases:
+Similar Patterns in Solidity:
 {rag_context}
 
 TASK:
